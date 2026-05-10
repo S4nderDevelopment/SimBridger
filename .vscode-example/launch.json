@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/SimXperience-SimHub-Passthrough/bin/Debug/net9.0/SimXperienceSimHubPassthrough.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/SimXperience-SimHub-Passthrough",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ]
+}
