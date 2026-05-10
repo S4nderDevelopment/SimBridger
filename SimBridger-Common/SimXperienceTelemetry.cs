@@ -1,12 +1,12 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace SimBridger.Main;
+namespace SimBridger.Common;
 
 // Wire format: 65 little-endian floats, in declared order. SimHub & SimXperience are
 // Windows-only (x86/x64), so MemoryMarshal's native byte order matches the receiver.
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-internal struct SimXperienceTelemetry
+public struct SimXperienceTelemetry
 {
     [SimXperienceChannel("total_time")] public float TotalTime;
     [SimXperienceChannel("paused")] public float Paused;

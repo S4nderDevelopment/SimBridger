@@ -3,217 +3,203 @@ using System.Runtime.InteropServices;
 
 namespace SimBridger.RbrNgp;
 
-// Wire format: NGP physics telemetry channels, declared in TSV-header order so that
-// MemoryMarshal.Read produces a straight binary blit. Field names mirror the channel
-// names from the gitignore/RBR-NGP/*.tsv reference dumps. Every channel is a 32-bit
-// little-endian float, EXCEPT UtcSystemTimeRaw — see its TODO below.
+// NGP UDP telemetry packet. Layout per Plugins/NGP/sdk/rbr.telemetry.data.TelemetryData.h
+// (#pragma pack(push, 1)). Default endpoint 127.0.0.1:6776, configurable via
+// udpTelemetryEndpoints in RichardBurnsRally.ini. Field order mirrors the C++ struct
+// hierarchy TelemetryData → Stage / Control / Car → Motion / Engine / Suspension →
+// Damper / Wheel → BrakeDisk / Tire → TireSegment[8] in declaration order. Integer
+// fields (gear, indices, helperSpringIsActive, totalSteps, currentSegment) are typed
+// per the SDK header — do not change them to float.
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 internal struct NgpTelemetry
 {
-    // --- Global channels ---
-    [NgpChannel("totalSteps")] public float TotalSteps;
-    [NgpChannel("progress")] public float Progress;
-    [NgpChannel("raceTime")] public float RaceTime;
-    // TODO: confirm wire encoding of utcSystemTime once the NGP plugin spec is available.
-    // The TSV shows microsecond-precision timestamps (e.g. "2025-02-02 11:46:24.032054"),
-    // which most likely maps to an 8-byte FILETIME or unix-microseconds field on the wire.
-    // If the binary format turns out to be a 16-byte SYSTEMTIME, widen this field accordingly
-    // and add a DateTime accessor. Don't bake in an epoch until that's verified.
-    [NgpChannel("utcSystemTime")] public long UtcSystemTimeRaw;
-    [NgpChannel("speed")] public float Speed;
-    [NgpChannel("engineRotation")] public float EngineRotation;
-    [NgpChannel("gear")] public float Gear;
-    [NgpChannel("driveLineLocation")] public float DriveLineLocation;
-    [NgpChannel("travelDistance")] public float TravelDistance;
-    [NgpChannel("distanceToEnd")] public float DistanceToEnd;
-    [NgpChannel("stage")] public float Stage;
-    [NgpChannel("car")] public float Car;
-    [NgpChannel("steering")] public float Steering;
-    [NgpChannel("throttle")] public float Throttle;
-    [NgpChannel("brake")] public float Brake;
-    [NgpChannel("handbrake")] public float Handbrake;
-    [NgpChannel("clutch")] public float Clutch;
-    [NgpChannel("footbrakePressure")] public float FootbrakePressure;
-    [NgpChannel("handbrakePressure")] public float HandbrakePressure;
-    [NgpChannel("radiatorCoolantHeatState.temperature")] public float RadiatorCoolantTemperature;
-    [NgpChannel("engineCoolantHeatState.temperature")] public float EngineCoolantTemperature;
-    [NgpChannel("engineTemperature")] public float EngineTemperature;
-    [NgpChannel("position.x")] public float PositionX;
-    [NgpChannel("position.y")] public float PositionY;
-    [NgpChannel("position.z")] public float PositionZ;
-    [NgpChannel("vecRelativeLinearVelocity.x")] public float RelativeLinearVelocityX;
-    [NgpChannel("vecRelativeLinearVelocity.y")] public float RelativeLinearVelocityY;
-    [NgpChannel("vecRelativeLinearVelocity.z")] public float RelativeLinearVelocityZ;
-    [NgpChannel("vecRelativeAngularVelocity.x")] public float RelativeAngularVelocityX;
-    [NgpChannel("vecRelativeAngularVelocity.y")] public float RelativeAngularVelocityY;
-    [NgpChannel("vecRelativeAngularVelocity.z")] public float RelativeAngularVelocityZ;
-    [NgpChannel("vecRelativeLinearAcceleration.x")] public float RelativeLinearAccelerationX;
-    [NgpChannel("vecRelativeLinearAcceleration.y")] public float RelativeLinearAccelerationY;
-    [NgpChannel("vecRelativeLinearAcceleration.z")] public float RelativeLinearAccelerationZ;
-    [NgpChannel("vecRelativeAngularAcceleration.x")] public float RelativeAngularAccelerationX;
-    [NgpChannel("vecRelativeAngularAcceleration.y")] public float RelativeAngularAccelerationY;
-    [NgpChannel("vecRelativeAngularAcceleration.z")] public float RelativeAngularAccelerationZ;
-    [NgpChannel("vecLinearVelocityCar.x")] public float LinearVelocityCarX;
-    [NgpChannel("vecLinearVelocityCar.y")] public float LinearVelocityCarY;
-    [NgpChannel("vecLinearVelocityCar.z")] public float LinearVelocityCarZ;
-    [NgpChannel("vecAngularVelocityCar.x")] public float AngularVelocityCarX;
-    [NgpChannel("vecAngularVelocityCar.y")] public float AngularVelocityCarY;
-    [NgpChannel("vecAngularVelocityCar.z")] public float AngularVelocityCarZ;
-    [NgpChannel("vecLinearAccelerationCar.x")] public float LinearAccelerationCarX;
-    [NgpChannel("vecLinearAccelerationCar.y")] public float LinearAccelerationCarY;
-    [NgpChannel("vecLinearAccelerationCar.z")] public float LinearAccelerationCarZ;
-    [NgpChannel("vecAngularAccelerationCar.x")] public float AngularAccelerationCarX;
-    [NgpChannel("vecAngularAccelerationCar.y")] public float AngularAccelerationCarY;
-    [NgpChannel("vecAngularAccelerationCar.z")] public float AngularAccelerationCarZ;
-    [NgpChannel("roll")] public float Roll;
-    [NgpChannel("pitch")] public float Pitch;
-    [NgpChannel("yaw")] public float Yaw;
-    [NgpChannel("vecAvgLinearAccelerationCar.x")] public float AvgLinearAccelerationCarX;
-    [NgpChannel("vecAvgLinearAccelerationCar.y")] public float AvgLinearAccelerationCarY;
-    [NgpChannel("vecAvgLinearAccelerationCar.z")] public float AvgLinearAccelerationCarZ;
-    [NgpChannel("vecAvgAngularAccelerationCar.x")] public float AvgAngularAccelerationCarX;
-    [NgpChannel("vecAvgAngularAccelerationCar.y")] public float AvgAngularAccelerationCarY;
-    [NgpChannel("vecAvgAngularAccelerationCar.z")] public float AvgAngularAccelerationCarZ;
+    // --- TelemetryData ---
+    [NgpChannel("totalSteps")] public uint TotalSteps;
 
-    // --- Left-front wheel ---
-    [NgpChannel("LF.brakeDiskLayerTemp")] public float LFBrakeDiskLayerTemp;
-    [NgpChannel("LF.brakeDiskTemp")] public float LFBrakeDiskTemp;
-    [NgpChannel("LF.brakeWear")] public float LFBrakeWear;
-    [NgpChannel("LF.deflection")] public float LFDeflection;
-    [NgpChannel("LF.deflectionVelocity")] public float LFDeflectionVelocity;
-    [NgpChannel("LF.innerBumpDeflectionVelocity")] public float LFInnerBumpDeflectionVelocity;
-    [NgpChannel("LF.outerBumpDeflectionVelocity")] public float LFOuterBumpDeflectionVelocity;
-    [NgpChannel("LF.temperature")] public float LFTemperature;
-    [NgpChannel("LF.pressure")] public float LFPressure;
-    [NgpChannel("LF.segmentData[0].temperature")] public float LFSegmentTemperature0;
-    [NgpChannel("LF.segmentData[1].temperature")] public float LFSegmentTemperature1;
-    [NgpChannel("LF.segmentData[2].temperature")] public float LFSegmentTemperature2;
-    [NgpChannel("LF.segmentData[3].temperature")] public float LFSegmentTemperature3;
-    [NgpChannel("LF.segmentData[4].temperature")] public float LFSegmentTemperature4;
-    [NgpChannel("LF.segmentData[5].temperature")] public float LFSegmentTemperature5;
-    [NgpChannel("LF.segmentData[6].temperature")] public float LFSegmentTemperature6;
-    [NgpChannel("LF.segmentData[7].temperature")] public float LFSegmentTemperature7;
-    [NgpChannel("LF.treadTemperature")] public float LFTreadTemperature;
-    [NgpChannel("LF.tyreTemperature")] public float LFTyreTemperature;
-    [NgpChannel("LF.currentTyreSegment")] public float LFCurrentTyreSegment;
-    [NgpChannel("LF.rollbarForce")] public float LFRollbarForce;
-    [NgpChannel("LF.springForce")] public float LFSpringForce;
-    [NgpChannel("LF.dampingForce")] public float LFDampingForce;
-    [NgpChannel("LF.strutForce")] public float LFStrutForce;
-    [NgpChannel("LF.helperSpringActive")] public float LFHelperSpringActive;
-    [NgpChannel("LF.wear[0]")] public float LFWear0;
-    [NgpChannel("LF.wear[1]")] public float LFWear1;
-    [NgpChannel("LF.wear[2]")] public float LFWear2;
-    [NgpChannel("LF.wear[3]")] public float LFWear3;
-    [NgpChannel("LF.wear[4]")] public float LFWear4;
-    [NgpChannel("LF.wear[5]")] public float LFWear5;
-    [NgpChannel("LF.wear[6]")] public float LFWear6;
-    [NgpChannel("LF.wear[7]")] public float LFWear7;
+    // --- Stage ---
+    [NgpChannel("stage.index")] public int StageIndex;
+    [NgpChannel("stage.progress")] public float StageProgress;
+    [NgpChannel("stage.raceTime")] public float StageRaceTime;
+    [NgpChannel("stage.driveLineLocation")] public float StageDriveLineLocation;
+    [NgpChannel("stage.distanceToEnd")] public float StageDistanceToEnd;
 
-    // --- Right-front wheel ---
-    [NgpChannel("RF.brakeDiskLayerTemp")] public float RFBrakeDiskLayerTemp;
-    [NgpChannel("RF.brakeDiskTemp")] public float RFBrakeDiskTemp;
-    [NgpChannel("RF.brakeWear")] public float RFBrakeWear;
-    [NgpChannel("RF.deflection")] public float RFDeflection;
-    [NgpChannel("RF.deflectionVelocity")] public float RFDeflectionVelocity;
-    [NgpChannel("RF.innerBumpDeflectionVelocity")] public float RFInnerBumpDeflectionVelocity;
-    [NgpChannel("RF.outerBumpDeflectionVelocity")] public float RFOuterBumpDeflectionVelocity;
-    [NgpChannel("RF.temperature")] public float RFTemperature;
-    [NgpChannel("RF.pressure")] public float RFPressure;
-    [NgpChannel("RF.segmentData[0].temperature")] public float RFSegmentTemperature0;
-    [NgpChannel("RF.segmentData[1].temperature")] public float RFSegmentTemperature1;
-    [NgpChannel("RF.segmentData[2].temperature")] public float RFSegmentTemperature2;
-    [NgpChannel("RF.segmentData[3].temperature")] public float RFSegmentTemperature3;
-    [NgpChannel("RF.segmentData[4].temperature")] public float RFSegmentTemperature4;
-    [NgpChannel("RF.segmentData[5].temperature")] public float RFSegmentTemperature5;
-    [NgpChannel("RF.segmentData[6].temperature")] public float RFSegmentTemperature6;
-    [NgpChannel("RF.segmentData[7].temperature")] public float RFSegmentTemperature7;
-    [NgpChannel("RF.treadTemperature")] public float RFTreadTemperature;
-    [NgpChannel("RF.tyreTemperature")] public float RFTyreTemperature;
-    [NgpChannel("RF.currentTyreSegment")] public float RFCurrentTyreSegment;
-    [NgpChannel("RF.rollbarForce")] public float RFRollbarForce;
-    [NgpChannel("RF.springForce")] public float RFSpringForce;
-    [NgpChannel("RF.dampingForce")] public float RFDampingForce;
-    [NgpChannel("RF.strutForce")] public float RFStrutForce;
-    [NgpChannel("RF.helperSpringActive")] public float RFHelperSpringActive;
-    [NgpChannel("RF.wear[0]")] public float RFWear0;
-    [NgpChannel("RF.wear[1]")] public float RFWear1;
-    [NgpChannel("RF.wear[2]")] public float RFWear2;
-    [NgpChannel("RF.wear[3]")] public float RFWear3;
-    [NgpChannel("RF.wear[4]")] public float RFWear4;
-    [NgpChannel("RF.wear[5]")] public float RFWear5;
-    [NgpChannel("RF.wear[6]")] public float RFWear6;
-    [NgpChannel("RF.wear[7]")] public float RFWear7;
+    // --- Control ---
+    [NgpChannel("control.steering")] public float ControlSteering;
+    [NgpChannel("control.throttle")] public float ControlThrottle;
+    [NgpChannel("control.brake")] public float ControlBrake;
+    [NgpChannel("control.handbrake")] public float ControlHandbrake;
+    [NgpChannel("control.clutch")] public float ControlClutch;
+    [NgpChannel("control.gear")] public int ControlGear;
+    [NgpChannel("control.footbrakePressure")] public float ControlFootbrakePressure;
+    [NgpChannel("control.handbrakePressure")] public float ControlHandbrakePressure;
 
-    // --- Left-back wheel ---
-    [NgpChannel("LB.brakeDiskLayerTemp")] public float LBBrakeDiskLayerTemp;
-    [NgpChannel("LB.brakeDiskTemp")] public float LBBrakeDiskTemp;
-    [NgpChannel("LB.brakeWear")] public float LBBrakeWear;
-    [NgpChannel("LB.deflection")] public float LBDeflection;
-    [NgpChannel("LB.deflectionVelocity")] public float LBDeflectionVelocity;
-    [NgpChannel("LB.innerBumpDeflectionVelocity")] public float LBInnerBumpDeflectionVelocity;
-    [NgpChannel("LB.outerBumpDeflectionVelocity")] public float LBOuterBumpDeflectionVelocity;
-    [NgpChannel("LB.temperature")] public float LBTemperature;
-    [NgpChannel("LB.pressure")] public float LBPressure;
-    [NgpChannel("LB.segmentData[0].temperature")] public float LBSegmentTemperature0;
-    [NgpChannel("LB.segmentData[1].temperature")] public float LBSegmentTemperature1;
-    [NgpChannel("LB.segmentData[2].temperature")] public float LBSegmentTemperature2;
-    [NgpChannel("LB.segmentData[3].temperature")] public float LBSegmentTemperature3;
-    [NgpChannel("LB.segmentData[4].temperature")] public float LBSegmentTemperature4;
-    [NgpChannel("LB.segmentData[5].temperature")] public float LBSegmentTemperature5;
-    [NgpChannel("LB.segmentData[6].temperature")] public float LBSegmentTemperature6;
-    [NgpChannel("LB.segmentData[7].temperature")] public float LBSegmentTemperature7;
-    [NgpChannel("LB.treadTemperature")] public float LBTreadTemperature;
-    [NgpChannel("LB.tyreTemperature")] public float LBTyreTemperature;
-    [NgpChannel("LB.currentTyreSegment")] public float LBCurrentTyreSegment;
-    [NgpChannel("LB.rollbarForce")] public float LBRollbarForce;
-    [NgpChannel("LB.springForce")] public float LBSpringForce;
-    [NgpChannel("LB.dampingForce")] public float LBDampingForce;
-    [NgpChannel("LB.strutForce")] public float LBStrutForce;
-    [NgpChannel("LB.helperSpringActive")] public float LBHelperSpringActive;
-    [NgpChannel("LB.wear[0]")] public float LBWear0;
-    [NgpChannel("LB.wear[1]")] public float LBWear1;
-    [NgpChannel("LB.wear[2]")] public float LBWear2;
-    [NgpChannel("LB.wear[3]")] public float LBWear3;
-    [NgpChannel("LB.wear[4]")] public float LBWear4;
-    [NgpChannel("LB.wear[5]")] public float LBWear5;
-    [NgpChannel("LB.wear[6]")] public float LBWear6;
-    [NgpChannel("LB.wear[7]")] public float LBWear7;
+    // --- Car ---
+    [NgpChannel("car.index")] public int CarIndex;
+    [NgpChannel("car.speed")] public float CarSpeed;
+    [NgpChannel("car.positionX")] public float CarPositionX;
+    [NgpChannel("car.positionY")] public float CarPositionY;
+    [NgpChannel("car.positionZ")] public float CarPositionZ;
+    [NgpChannel("car.roll")] public float CarRoll;
+    [NgpChannel("car.pitch")] public float CarPitch;
+    [NgpChannel("car.yaw")] public float CarYaw;
 
-    // --- Right-back wheel ---
-    [NgpChannel("RB.brakeDiskLayerTemp")] public float RBBrakeDiskLayerTemp;
-    [NgpChannel("RB.brakeDiskTemp")] public float RBBrakeDiskTemp;
-    [NgpChannel("RB.brakeWear")] public float RBBrakeWear;
-    [NgpChannel("RB.deflection")] public float RBDeflection;
-    [NgpChannel("RB.deflectionVelocity")] public float RBDeflectionVelocity;
-    [NgpChannel("RB.innerBumpDeflectionVelocity")] public float RBInnerBumpDeflectionVelocity;
-    [NgpChannel("RB.outerBumpDeflectionVelocity")] public float RBOuterBumpDeflectionVelocity;
-    [NgpChannel("RB.temperature")] public float RBTemperature;
-    [NgpChannel("RB.pressure")] public float RBPressure;
-    [NgpChannel("RB.segmentData[0].temperature")] public float RBSegmentTemperature0;
-    [NgpChannel("RB.segmentData[1].temperature")] public float RBSegmentTemperature1;
-    [NgpChannel("RB.segmentData[2].temperature")] public float RBSegmentTemperature2;
-    [NgpChannel("RB.segmentData[3].temperature")] public float RBSegmentTemperature3;
-    [NgpChannel("RB.segmentData[4].temperature")] public float RBSegmentTemperature4;
-    [NgpChannel("RB.segmentData[5].temperature")] public float RBSegmentTemperature5;
-    [NgpChannel("RB.segmentData[6].temperature")] public float RBSegmentTemperature6;
-    [NgpChannel("RB.segmentData[7].temperature")] public float RBSegmentTemperature7;
-    [NgpChannel("RB.treadTemperature")] public float RBTreadTemperature;
-    [NgpChannel("RB.tyreTemperature")] public float RBTyreTemperature;
-    [NgpChannel("RB.currentTyreSegment")] public float RBCurrentTyreSegment;
-    [NgpChannel("RB.rollbarForce")] public float RBRollbarForce;
-    [NgpChannel("RB.springForce")] public float RBSpringForce;
-    [NgpChannel("RB.dampingForce")] public float RBDampingForce;
-    [NgpChannel("RB.strutForce")] public float RBStrutForce;
-    [NgpChannel("RB.helperSpringActive")] public float RBHelperSpringActive;
-    [NgpChannel("RB.wear[0]")] public float RBWear0;
-    [NgpChannel("RB.wear[1]")] public float RBWear1;
-    [NgpChannel("RB.wear[2]")] public float RBWear2;
-    [NgpChannel("RB.wear[3]")] public float RBWear3;
-    [NgpChannel("RB.wear[4]")] public float RBWear4;
-    [NgpChannel("RB.wear[5]")] public float RBWear5;
-    [NgpChannel("RB.wear[6]")] public float RBWear6;
-    [NgpChannel("RB.wear[7]")] public float RBWear7;
+    // --- Car.velocities (Motion) ---
+    [NgpChannel("car.velocities.surge")] public float CarVelocitySurge;
+    [NgpChannel("car.velocities.sway")] public float CarVelocitySway;
+    [NgpChannel("car.velocities.heave")] public float CarVelocityHeave;
+    [NgpChannel("car.velocities.roll")] public float CarVelocityRoll;
+    [NgpChannel("car.velocities.pitch")] public float CarVelocityPitch;
+    [NgpChannel("car.velocities.yaw")] public float CarVelocityYaw;
+
+    // --- Car.accelerations (Motion) ---
+    [NgpChannel("car.accelerations.surge")] public float CarAccelerationSurge;
+    [NgpChannel("car.accelerations.sway")] public float CarAccelerationSway;
+    [NgpChannel("car.accelerations.heave")] public float CarAccelerationHeave;
+    [NgpChannel("car.accelerations.roll")] public float CarAccelerationRoll;
+    [NgpChannel("car.accelerations.pitch")] public float CarAccelerationPitch;
+    [NgpChannel("car.accelerations.yaw")] public float CarAccelerationYaw;
+
+    // --- Car.engine ---
+    [NgpChannel("car.engine.rpm")] public float EngineRpm;
+    [NgpChannel("car.engine.radiatorCoolantTemperature")] public float EngineRadiatorCoolantTemperature;
+    [NgpChannel("car.engine.engineCoolantTemperature")] public float EngineCoolantTemperature;
+    [NgpChannel("car.engine.engineTemperature")] public float EngineTemperature;
+
+    // --- Car.suspensionLF ---
+    [NgpChannel("car.suspensionLF.springDeflection")] public float LFSpringDeflection;
+    [NgpChannel("car.suspensionLF.rollbarForce")] public float LFRollbarForce;
+    [NgpChannel("car.suspensionLF.springForce")] public float LFSpringForce;
+    [NgpChannel("car.suspensionLF.damperForce")] public float LFDamperForce;
+    [NgpChannel("car.suspensionLF.strutForce")] public float LFStrutForce;
+    [NgpChannel("car.suspensionLF.helperSpringIsActive")] public int LFHelperSpringIsActive;
+    [NgpChannel("car.suspensionLF.damper.damage")] public float LFDamperDamage;
+    [NgpChannel("car.suspensionLF.damper.pistonVelocity")] public float LFDamperPistonVelocity;
+    [NgpChannel("car.suspensionLF.wheel.brakeDisk.layerTemperature")] public float LFBrakeDiskLayerTemperature;
+    [NgpChannel("car.suspensionLF.wheel.brakeDisk.temperature")] public float LFBrakeDiskTemperature;
+    [NgpChannel("car.suspensionLF.wheel.brakeDisk.wear")] public float LFBrakeDiskWear;
+    [NgpChannel("car.suspensionLF.wheel.tire.pressure")] public float LFTirePressure;
+    [NgpChannel("car.suspensionLF.wheel.tire.temperature")] public float LFTireTemperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.carcassTemperature")] public float LFTireCarcassTemperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.treadTemperature")] public float LFTireTreadTemperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.currentSegment")] public uint LFTireCurrentSegment;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment0.temperature")] public float LFTireSegment0Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment0.wear")] public float LFTireSegment0Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment1.temperature")] public float LFTireSegment1Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment1.wear")] public float LFTireSegment1Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment2.temperature")] public float LFTireSegment2Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment2.wear")] public float LFTireSegment2Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment3.temperature")] public float LFTireSegment3Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment3.wear")] public float LFTireSegment3Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment4.temperature")] public float LFTireSegment4Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment4.wear")] public float LFTireSegment4Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment5.temperature")] public float LFTireSegment5Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment5.wear")] public float LFTireSegment5Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment6.temperature")] public float LFTireSegment6Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment6.wear")] public float LFTireSegment6Wear;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment7.temperature")] public float LFTireSegment7Temperature;
+    [NgpChannel("car.suspensionLF.wheel.tire.segment7.wear")] public float LFTireSegment7Wear;
+
+    // --- Car.suspensionRF ---
+    [NgpChannel("car.suspensionRF.springDeflection")] public float RFSpringDeflection;
+    [NgpChannel("car.suspensionRF.rollbarForce")] public float RFRollbarForce;
+    [NgpChannel("car.suspensionRF.springForce")] public float RFSpringForce;
+    [NgpChannel("car.suspensionRF.damperForce")] public float RFDamperForce;
+    [NgpChannel("car.suspensionRF.strutForce")] public float RFStrutForce;
+    [NgpChannel("car.suspensionRF.helperSpringIsActive")] public int RFHelperSpringIsActive;
+    [NgpChannel("car.suspensionRF.damper.damage")] public float RFDamperDamage;
+    [NgpChannel("car.suspensionRF.damper.pistonVelocity")] public float RFDamperPistonVelocity;
+    [NgpChannel("car.suspensionRF.wheel.brakeDisk.layerTemperature")] public float RFBrakeDiskLayerTemperature;
+    [NgpChannel("car.suspensionRF.wheel.brakeDisk.temperature")] public float RFBrakeDiskTemperature;
+    [NgpChannel("car.suspensionRF.wheel.brakeDisk.wear")] public float RFBrakeDiskWear;
+    [NgpChannel("car.suspensionRF.wheel.tire.pressure")] public float RFTirePressure;
+    [NgpChannel("car.suspensionRF.wheel.tire.temperature")] public float RFTireTemperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.carcassTemperature")] public float RFTireCarcassTemperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.treadTemperature")] public float RFTireTreadTemperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.currentSegment")] public uint RFTireCurrentSegment;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment0.temperature")] public float RFTireSegment0Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment0.wear")] public float RFTireSegment0Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment1.temperature")] public float RFTireSegment1Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment1.wear")] public float RFTireSegment1Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment2.temperature")] public float RFTireSegment2Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment2.wear")] public float RFTireSegment2Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment3.temperature")] public float RFTireSegment3Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment3.wear")] public float RFTireSegment3Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment4.temperature")] public float RFTireSegment4Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment4.wear")] public float RFTireSegment4Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment5.temperature")] public float RFTireSegment5Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment5.wear")] public float RFTireSegment5Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment6.temperature")] public float RFTireSegment6Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment6.wear")] public float RFTireSegment6Wear;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment7.temperature")] public float RFTireSegment7Temperature;
+    [NgpChannel("car.suspensionRF.wheel.tire.segment7.wear")] public float RFTireSegment7Wear;
+
+    // --- Car.suspensionLB ---
+    [NgpChannel("car.suspensionLB.springDeflection")] public float LBSpringDeflection;
+    [NgpChannel("car.suspensionLB.rollbarForce")] public float LBRollbarForce;
+    [NgpChannel("car.suspensionLB.springForce")] public float LBSpringForce;
+    [NgpChannel("car.suspensionLB.damperForce")] public float LBDamperForce;
+    [NgpChannel("car.suspensionLB.strutForce")] public float LBStrutForce;
+    [NgpChannel("car.suspensionLB.helperSpringIsActive")] public int LBHelperSpringIsActive;
+    [NgpChannel("car.suspensionLB.damper.damage")] public float LBDamperDamage;
+    [NgpChannel("car.suspensionLB.damper.pistonVelocity")] public float LBDamperPistonVelocity;
+    [NgpChannel("car.suspensionLB.wheel.brakeDisk.layerTemperature")] public float LBBrakeDiskLayerTemperature;
+    [NgpChannel("car.suspensionLB.wheel.brakeDisk.temperature")] public float LBBrakeDiskTemperature;
+    [NgpChannel("car.suspensionLB.wheel.brakeDisk.wear")] public float LBBrakeDiskWear;
+    [NgpChannel("car.suspensionLB.wheel.tire.pressure")] public float LBTirePressure;
+    [NgpChannel("car.suspensionLB.wheel.tire.temperature")] public float LBTireTemperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.carcassTemperature")] public float LBTireCarcassTemperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.treadTemperature")] public float LBTireTreadTemperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.currentSegment")] public uint LBTireCurrentSegment;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment0.temperature")] public float LBTireSegment0Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment0.wear")] public float LBTireSegment0Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment1.temperature")] public float LBTireSegment1Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment1.wear")] public float LBTireSegment1Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment2.temperature")] public float LBTireSegment2Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment2.wear")] public float LBTireSegment2Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment3.temperature")] public float LBTireSegment3Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment3.wear")] public float LBTireSegment3Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment4.temperature")] public float LBTireSegment4Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment4.wear")] public float LBTireSegment4Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment5.temperature")] public float LBTireSegment5Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment5.wear")] public float LBTireSegment5Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment6.temperature")] public float LBTireSegment6Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment6.wear")] public float LBTireSegment6Wear;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment7.temperature")] public float LBTireSegment7Temperature;
+    [NgpChannel("car.suspensionLB.wheel.tire.segment7.wear")] public float LBTireSegment7Wear;
+
+    // --- Car.suspensionRB ---
+    [NgpChannel("car.suspensionRB.springDeflection")] public float RBSpringDeflection;
+    [NgpChannel("car.suspensionRB.rollbarForce")] public float RBRollbarForce;
+    [NgpChannel("car.suspensionRB.springForce")] public float RBSpringForce;
+    [NgpChannel("car.suspensionRB.damperForce")] public float RBDamperForce;
+    [NgpChannel("car.suspensionRB.strutForce")] public float RBStrutForce;
+    [NgpChannel("car.suspensionRB.helperSpringIsActive")] public int RBHelperSpringIsActive;
+    [NgpChannel("car.suspensionRB.damper.damage")] public float RBDamperDamage;
+    [NgpChannel("car.suspensionRB.damper.pistonVelocity")] public float RBDamperPistonVelocity;
+    [NgpChannel("car.suspensionRB.wheel.brakeDisk.layerTemperature")] public float RBBrakeDiskLayerTemperature;
+    [NgpChannel("car.suspensionRB.wheel.brakeDisk.temperature")] public float RBBrakeDiskTemperature;
+    [NgpChannel("car.suspensionRB.wheel.brakeDisk.wear")] public float RBBrakeDiskWear;
+    [NgpChannel("car.suspensionRB.wheel.tire.pressure")] public float RBTirePressure;
+    [NgpChannel("car.suspensionRB.wheel.tire.temperature")] public float RBTireTemperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.carcassTemperature")] public float RBTireCarcassTemperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.treadTemperature")] public float RBTireTreadTemperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.currentSegment")] public uint RBTireCurrentSegment;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment0.temperature")] public float RBTireSegment0Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment0.wear")] public float RBTireSegment0Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment1.temperature")] public float RBTireSegment1Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment1.wear")] public float RBTireSegment1Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment2.temperature")] public float RBTireSegment2Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment2.wear")] public float RBTireSegment2Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment3.temperature")] public float RBTireSegment3Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment3.wear")] public float RBTireSegment3Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment4.temperature")] public float RBTireSegment4Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment4.wear")] public float RBTireSegment4Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment5.temperature")] public float RBTireSegment5Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment5.wear")] public float RBTireSegment5Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment6.temperature")] public float RBTireSegment6Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment6.wear")] public float RBTireSegment6Wear;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment7.temperature")] public float RBTireSegment7Temperature;
+    [NgpChannel("car.suspensionRB.wheel.tire.segment7.wear")] public float RBTireSegment7Wear;
 
     public static int Size => Unsafe.SizeOf<NgpTelemetry>();
 

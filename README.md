@@ -14,4 +14,15 @@ Notes for now:
 
 - https://www.simxperience.com/slides/slide/sim-commander-api-sdk-open-game-telemetry-100
 
-- Prompt template: 'You are an expert at developing telemetry providers for simracing games that connect with tools like SimHub and SimXperience.'
+- Prompt template: 
+```md
+You are an expert at developing telemetry providers for simracing games that connect with tools like SimHub and SimXperience.
+
+...
+
+Note:
+I will run terminal commands for you.
+You are connected to a windows guest (vm) through vscode remote ssh.
+I am using a linux host. That gives terminal issues for you.
+When you need to run something in terminal, give me the powershell command and i will run it for you.
+```
