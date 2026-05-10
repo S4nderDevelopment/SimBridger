@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace SimBridger.RbrNgp;
 
-internal sealed class NgpUdpClient : IDisposable
+public sealed class NgpUdpClient : IDisposable
 {
     private readonly UdpClient _client;
 

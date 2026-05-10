@@ -11,7 +11,7 @@ namespace SimBridger.RbrNgp;
 // fields (gear, indices, helperSpringIsActive, totalSteps, currentSegment) are typed
 // per the SDK header — do not change them to float.
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-internal struct NgpTelemetry
+public struct NgpTelemetry
 {
     // --- TelemetryData ---
     [NgpChannel("totalSteps")] public uint TotalSteps;
