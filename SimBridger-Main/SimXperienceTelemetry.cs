@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace SimXperienceSimHubPassthrough;
+namespace SimBridger.Main;
 
 // Wire format: 65 little-endian floats, in declared order. SimHub & SimXperience are
 // Windows-only (x86/x64), so MemoryMarshal's native byte order matches the receiver.

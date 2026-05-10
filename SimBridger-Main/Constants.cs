@@ -1,4 +1,4 @@
-namespace SimXperienceSimHubPassthrough;
+namespace SimBridger.Main;
 
 internal static class Constants
 {

@@ -6,9 +6,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/SimXperience-SimHub-Passthrough/bin/Debug/net9.0/SimXperienceSimHubPassthrough.dll",
+            "program": "${workspaceFolder}/SimBridger-Main/bin/Debug/net9.0/SimBridgerMain.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/SimXperience-SimHub-Passthrough",
+            "cwd": "${workspaceFolder}/SimBridger-Main",
             "console": "integratedTerminal",
             "stopAtEntry": false
         },

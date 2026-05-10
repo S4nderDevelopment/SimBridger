@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace SimXperienceSimHubPassthrough;
+namespace SimBridger.Main;
 
 internal sealed class SimXperienceUdpClient : IDisposable
 {

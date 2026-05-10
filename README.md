@@ -5,6 +5,7 @@ Bridging tool to forward telemetry from Sim-Racing games between SimHub and SimX
 # Repo links
 
 Official: [GitLab](https://gitlab.com/s4nderdevelopment/SimBridger)
+
 Mirror (official): [GitHub](https://github.com/S4nderDevelopment/SimBridger)
 
 # Will be updated later on...

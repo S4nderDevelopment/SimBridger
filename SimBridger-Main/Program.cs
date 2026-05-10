@@ -1,4 +1,4 @@
-using SimXperienceSimHubPassthrough;
+using SimBridger.Main;
 using System.Diagnostics;
 
 Debug.Assert(SimXperienceTelemetry.Size == 260,

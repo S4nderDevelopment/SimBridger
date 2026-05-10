@@ -1,4 +1,4 @@
-namespace SimXperienceSimHubPassthrough;
+namespace SimBridger.Main;
 
 [AttributeUsage(AttributeTargets.Field)]
 internal sealed class SimXperienceChannelAttribute(string name, float scale = 1.0f) : Attribute

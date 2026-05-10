@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/SimXperience_SimHub_Passthrough.sln",
+                "${workspaceFolder}/SimBridger.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -23,7 +23,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/SimXperience_SimHub_Passthrough.sln",
+                "${workspaceFolder}/SimBridger.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -37,7 +37,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/SimXperience-SimHub-Passthrough/SimXperienceSimHubPassthrough.csproj"
+                "${workspaceFolder}/SimBridger-Main/SimBridgerMain.csproj"
             ],
             "problemMatcher": "$msCompile"
         }
