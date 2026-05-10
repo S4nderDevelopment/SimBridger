@@ -13,3 +13,5 @@ Mirror (official): [GitHub](https://github.com/S4nderDevelopment/SimBridger)
 Notes for now:
 
 - https://www.simxperience.com/slides/slide/sim-commander-api-sdk-open-game-telemetry-100
+
+- Prompt template: 'You are an expert at developing telemetry providers for simracing games that connect with tools like SimHub and SimXperience.'
